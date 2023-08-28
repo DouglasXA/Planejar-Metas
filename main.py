@@ -18,29 +18,35 @@ cursor.execute('''
 ''')
 conn.commit()
 
+
 # Função para adicionar uma nova meta
 def adicionar_meta(titulo, descricao, data_limite, categoria):
     cursor.execute('INSERT INTO metas (titulo, descricao, data_limite, progresso, categoria) VALUES (?, ?, ?, ?, ?)',
                    (titulo, descricao, data_limite, 0, categoria))
     conn.commit()
 
+
 # Função para atualizar o progresso de uma meta
 def atualizar_progresso(meta_id, novo_progresso):
     cursor.execute('UPDATE metas SET progresso = ? WHERE id = ?', (novo_progresso, meta_id))
     conn.commit()
+
 
 # Função para excluir uma meta
 def excluir_meta(meta_id):
     cursor.execute('DELETE FROM metas WHERE id = ?', (meta_id,))
     conn.commit()
 
+
 # Função para buscar todas as metas
 def buscar_metas(categoria=None):
     if categoria:
-        cursor.execute('SELECT id, titulo, descricao, data_limite, progresso FROM metas WHERE categoria = ?', (categoria,))
+        cursor.execute('SELECT id, titulo, descricao, data_limite, progresso FROM metas WHERE categoria = ?',
+                       (categoria,))
     else:
         cursor.execute('SELECT id, titulo, descricao, data_limite, progresso FROM metas')
     return cursor.fetchall()
+
 
 def main():
     st.title("Aplicativo de Definição de Metas")
@@ -64,13 +70,13 @@ def main():
         "Familiar": "orange"
     }
     for cat, cor in categorias.items():
-        st.write(f"## {cat}", f"Categoria: {cat}", key=f"header_{cat}")
+        st.markdown(f'## <span style="color:{cor}">{cat}</span>', unsafe_allow_html=True)
         metas = buscar_metas(cat)
         if metas:
             for meta in metas:
                 meta_id, titulo, descricao, data_limite, progresso = meta
 
-                with st.expander(titulo, key=f"expander_{meta_id}", expanded=True):
+                with st.expander(titulo):
                     st.text(f"Descrição: {descricao}")
                     st.text(f"Data Limite: {data_limite}")
                     st.progress(progresso, f"Progresso: {progresso}%")
@@ -78,11 +84,11 @@ def main():
                     if st.button(f"Atualizar Progresso##{meta_id}"):
                         atualizar_progresso(meta_id, novo_progresso)
                         st.success("Progresso atualizado com sucesso!")
-                    
-                    st.button(f"Excluir Meta##{meta_id}", key=f"delete_{meta_id}", help=f"Excluir a meta '{titulo}'")
-                    if st.button(f"Excluir Meta##{meta_id}", key=f"delete_{meta_id}"):
+
+                    if st.button(f"Excluir Meta##{meta_id}"):
                         excluir_meta(meta_id)
                         st.success("Meta excluída com sucesso!")
+
 
 if __name__ == "__main__":
     main()
