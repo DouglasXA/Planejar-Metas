@@ -1,32 +1,42 @@
-
 import streamlit as st
+import sqlite3
 
-# Lista para armazenar as metas
-metas = []
+# Conexão com o banco de dados SQLite
+conn = sqlite3.connect('metas.db')
+cursor = conn.cursor()
 
+# Criar tabela se ela não existir
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS metas (
+        id INTEGER PRIMARY KEY,
+        titulo TEXT,
+        descricao TEXT,
+        data_limite DATE,
+        progresso INTEGER,
+        categoria TEXT
+    )
+''')
+conn.commit()
 
 # Função para adicionar uma nova meta
-def adicionar_meta(titulo, descricao, data_limite):
-    metas.append({
-        "Título": titulo,
-        "Descrição": descricao,
-        "Data Limite": data_limite,
-        "Progresso": 0,
-        "Imagem": None
-    })
-
+def adicionar_meta(titulo, descricao, data_limite, categoria):
+    cursor.execute('INSERT INTO metas (titulo, descricao, data_limite, progresso, categoria) VALUES (?, ?, ?, ?, ?)',
+                   (titulo, descricao, data_limite, 0, categoria))
+    conn.commit()
 
 # Função para atualizar o progresso de uma meta
-def atualizar_progresso(index, novo_progresso):
-    metas[index]["Progresso"] = novo_progresso
+def atualizar_progresso(meta_id, novo_progresso):
+    cursor.execute('UPDATE metas SET progresso = ? WHERE id = ?', (novo_progresso, meta_id))
+    conn.commit()
 
+# Função para buscar todas as metas
+def buscar_metas(categoria=None):
+    if categoria:
+        cursor.execute('SELECT id, titulo, descricao, data_limite, progresso FROM metas WHERE categoria = ?', (categoria,))
+    else:
+        cursor.execute('SELECT id, titulo, descricao, data_limite, progresso FROM metas')
+    return cursor.fetchall()
 
-# Função para adicionar imagem a uma meta
-def adicionar_imagem(index, imagem):
-    metas[index]["Imagem"] = imagem
-
-
-# Função principal do aplicativo
 def main():
     st.title("Aplicativo de Definição de Metas")
 
@@ -35,34 +45,30 @@ def main():
     novo_titulo = st.text_input("Título da Meta")
     novo_descricao = st.text_area("Descrição da Meta")
     novo_data_limite = st.date_input("Data Limite")
+    categoria = st.selectbox("Categoria da Meta", ["Pessoal", "Profissional", "Familiar"])
 
     if st.button("Adicionar Meta"):
-        adicionar_meta(novo_titulo, novo_descricao, novo_data_limite)
+        adicionar_meta(novo_titulo, novo_descricao, novo_data_limite, categoria)
         st.success("Meta adicionada com sucesso!")
 
     # Listando metas
     st.subheader("Metas Definidas")
-    for i, meta in enumerate(metas):
-        st.write(f"**{meta['Título']}** - {meta['Descrição']} (Data Limite: {meta['Data Limite']})")
-        st.progress(meta['Progresso'])
+    categorias = ["Pessoal", "Profissional", "Familiar"]
+    for cat in categorias:
+        st.write(f"## {cat}")
+        metas = buscar_metas(cat)
+        if metas:
+            for meta in metas:
+                meta_id, titulo, descricao, data_limite, progresso = meta
 
-        # Atualizar progresso
-        novo_progresso = st.slider(f"Atualizar Progresso para {meta['Título']} (%)", 0, 100, meta['Progresso'])
-        if st.button("Atualizar Progresso"):
-            atualizar_progresso(i, novo_progresso)
-            st.success("Progresso atualizado com sucesso!")
+                with st.expander(titulo):
+                    st.text(f"Descrição: {descricao}")
+                    st.text(f"Data Limite: {data_limite}")
+                    st.progress(progresso, f"Progresso: {progresso}%")
+                    novo_progresso = st.slider(f"Atualizar Progresso (%)", 0, 100, progresso)
+                    if st.button(f"Atualizar Progresso##{meta_id}"):
+                        atualizar_progresso(meta_id, novo_progresso)
+                        st.success("Progresso atualizado com sucesso!")
 
-        # Adicionar imagem de realização
-        imagem = st.file_uploader(f"Carregar Imagem para {meta['Título']}", type=["jpg", "png"])
-        if imagem is not None:
-            adicionar_imagem(i, imagem)
-            st.success("Imagem adicionada com sucesso!")
-
-        if meta['Imagem'] is not None:
-            st.image(meta['Imagem'], caption="Imagem de Realização", use_column_width=True)
-
-
-# Executando o aplicativo
 if __name__ == "__main__":
     main()
-
